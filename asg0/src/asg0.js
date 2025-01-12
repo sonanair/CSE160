@@ -1,11 +1,3 @@
-// Sona Nair
-// snair4@ucsc.edu
-
-//Notes to Grader: 
-//I created helper functions to decrease redundancy in code
-
-
-
 // DrawTriangle.js (c) 2012 matsuda
 function main() {  
     // Retrieve <canvas> element
