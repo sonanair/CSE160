@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Change a point color</title>
+  </head>
+
+  <body onload="main()">
+    <canvas id="webgl" width="400" height="400">
+    Please use a browser that supports "canvas"
+    </canvas>
+
+    <img src="drawing.jpg" alt="Drawing of Crab"width="400" height="400">
+
+    <p>
+    <p id="numdot">XXX</p>
+
+    <p>
+    <!--<button type="button" id="green">Green</button> -->
+    <button type="button" id="undo">Undo</button>
+    <button type="button" id="redo">Redo</button>
+    <button type="button" id="clearButton">Clear</button>
+    <p>
+    <button type="button" id="pointButton">Point</button>
+    <button type="button" id="triButton">Triangle</button>
+    <button type="button" id="circleButton">Circle</button>
+
+
+    <p>
+    Red <input type="range" min="0" max="100" value="100" class="slider" id="redSlide">
+    Green <input type="range" min="0" max="100" value="100" class="slider" id="greenSlide">
+    Blue <input type="range" min="0" max="100" value="100" class="slider" id="blueSlide">
+
+    <p>
+    Size <input type="range" min="5" max="40" value="0" class="slider" id="sizeSlide">
+    (Circles) Segment Count <input type="range" min="5" max="40" value="0" class="slider" id="segSlide">
+
+    <p>
+    <button type="button" id="crabButton">Paint a Crab!</button>
+
+    <p>The "awesomeness" I added were an Undo and Redo button. This way, if you do not want to clear your entire
+      screen and just erase the most recent shape, the undo button is useful. Likewise, the redo button reverses the undo action.
+      To accomplish this, I created two new functions, one for each respective action. The Undo function pops the most recent action 
+      stored in the g_shapesList, stores the shape in a new stack, and re-renders the rest of the shapes. The Redo function takes the
+      stored shape and adds it back to g_shapesList, restoring the original drawing.
+    </p>
+
+    <script src="../lib/webgl-utils.js"></script>
+    <script src="../lib/webgl-debug.js"></script>
+    <script src="../lib/cuon-utils.js"></script>
+    <script src="Triangle.js"></script>
+    <script src="Point.js"></script>
+    <script src="Circle.js"></script>
+    <script src="ColoredPoints.js"></script>
+  </body>
+</html>
