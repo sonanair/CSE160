@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Change a point color</title>
+  </head>
+
+  <body onload="main()">
+    <canvas id="webgl" width="400" height="400">
+    Please use a browser that supports "canvas"
+    </canvas>
+
+    <img src="pumpkin.png" alt="Inspiration for Animal"width="300" height="400">
+    <p>This the inspiration for my creation, a dancing pumpkin from "Over the Garden Wall"</p>
+    <p>
+    <p id="numdot">XXX</p>
+
+    <p>
+    <!--<button type="button" id="green">Green</button> -->
+    <p>
+    Camera Angle <input type="range" min="-180" max="180" value="5" class="slider" id="angleSlide">
+    <p>
+    Shoulder Joint<input type="range" min="-45" max="45" value="0" class="slider" id="shoulderSlide">
+    <p>
+    Elbow Joint<input type="range" min="-45" max="45" value="0" class="slider" id="elbowSlide">
+    <p>
+    Wrist Joint<input type="range" min="-45" max="45" value="0" class="slider" id="wristSlide">
+    <p>
+    Animation:
+    <button type="button" id="animationBrownOnButton">ON</button>
+    <button type="button" id="animationBrownOffButton">OFF</button>
+    Poke with shift-click for a surprise animation!
+  
+
+    <script src="../lib/webgl-utils.js"></script>
+    <script src="../lib/webgl-debug.js"></script>
+    <script src="../lib/cuon-utils.js"></script>
+    <script src="../lib/cuon-matrix.js"></script>
+    <script src="Triangle.js"></script>
+    <script src="Point.js"></script>
+    <script src="Circle.js"></script>
+    <script src="Cube.js"></script>
+    <script src="Sphere.js"></script>
+    <script src="Prism.js"></script>
+    <script src="BlockyAnimal.js"></script>
+  </body>
+</html>
