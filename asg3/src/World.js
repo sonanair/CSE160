@@ -28,6 +28,7 @@ var FSHADER_SOURCE = `
   uniform sampler2D u_Sampler2;
   uniform sampler2D u_Sampler3;
   uniform sampler2D u_Sampler4;
+  uniform sampler2D u_Sampler5;
   uniform int u_whichTexture;
   void main() {
     if (u_whichTexture == -2){
@@ -46,6 +47,8 @@ var FSHADER_SOURCE = `
       gl_FragColor = texture2D(u_Sampler3, v_UV);
     } else if (u_whichTexture == 4) {
       gl_FragColor = texture2D(u_Sampler4, v_UV);
+    } else if (u_whichTexture == 5) {
+      gl_FragColor = texture2D(u_Sampler5, v_UV);
     } else {
       gl_FragColor = vec4(1,.2,.2,1);
     }
@@ -169,17 +172,17 @@ function connectVariableToGLSL(){
     return;
   }
 
+  u_Sampler5 = gl.getUniformLocation(gl.program, 'u_Sampler5');
+  if (!u_Sampler5) {
+    console.log('Failed to get the storage location of u_Sampler5');
+    return;
+  }
+
   // Get the storage location of u_Sampler
   u_whichTexture = gl.getUniformLocation(gl.program, 'u_whichTexture');
   if (!u_whichTexture) {
     console.log('Failed to get the storage location of u_whichTexture');
     return;
-  }
-
-  u_Clicked = gl.getUniformLocation(gl.program, 'u_Clicked');
-  if (!u_Clicked) {
-      console.log('Failed to get u_Clicked');
-      return;
   }
 
   var identityM = new Matrix4();
@@ -191,21 +194,9 @@ function connectVariableToGLSL(){
 let g_selectedColor=[1.0,1.0,1.0,1.0];
 let g_selectedSize = 5;
 let g_globalAngle = 0;
-let g_yellowAngle = 0;
-let g_magentaAngle = 0;
-let g_yellowAnimation = false;
-let g_magentaAnimation = false;
 
 function addActionsForHtmlUI(){
   //Button Events (Shape Type)
-  document.getElementById('animationYellowOnButton').onclick = function() { g_yellowAnimation = true; };
-  document.getElementById('animationYellowOffButton').onclick = function() { g_yellowAnimation = false; };
-
-  document.getElementById('animationMagentaOnButton').onclick = function() { g_magentaAnimation = true; };
-  document.getElementById('animationMagentaOffButton').onclick = function() { g_magentaAnimation = false; };
-
-  document.getElementById('yellowSlide').addEventListener('mousemove', function() { g_yellowAngle = this.value; renderAllShapes(); });
-  document.getElementById('magentaSlide').addEventListener('mousemove', function() { g_magentaAngle = this.value; renderAllShapes(); });
   
   document.getElementById('angleSlide').addEventListener('mousemove', function() { g_globalAngle = this.value; renderAllShapes(); });
 
@@ -220,7 +211,7 @@ function initTextures() {
   // Register the event handler to be called on loading an image
   sky.onload = function(){ sendImageToTEXTURE0(sky); };
   // Tell the browser to load an image
-  sky.src = 'sideOcean.jpg';
+  sky.src = 'sky.jpg';
 
   var pillar = new Image();
   if(!pillar){
@@ -255,6 +246,14 @@ function initTextures() {
   }
   ocean.onload = function(){ sendImageToTEXTURE4(ocean); };
   ocean.src = 'ocean.jpg';
+
+  var marble = new Image();
+  if(!marble){
+    console.log('Failed to create the image object');
+    return false;
+  }
+  marble.onload = function(){ sendImageToTEXTURE5(marble); };
+  marble.src = 'marble.jpg';
 
   return true;
 }
@@ -389,6 +388,21 @@ function sendImageToTEXTURE4(image) {
   console.log('finished loadTexture');
 }
 
+function sendImageToTEXTURE5(image) {
+  var texture = gl.createTexture();
+  if (!texture) {
+    console.log('Failed to create the texture object');
+    return false;
+  }
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+  gl.activeTexture(gl.TEXTURE5);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+  gl.uniform1i(u_Sampler5, 5);
+  console.log('finished loadTexture');
+}
+
 function main() {
   setupWebGL();
   connectVariableToGLSL();
@@ -398,14 +412,31 @@ function main() {
   initTextures();
 
   setupMouseControls();
+  
+  canvas.addEventListener("click", function(event) {
+    let { x, z } = getClickedPosition(event);
+    
+    // Check if cube already exists at this position
+    let existingIndex = cubes.findIndex(c => c.x === x && c.z === z);
+    if (existingIndex === -1) {
+        cubes.push({ x, z }); // Add new cube
+    }
+  });
+
+  canvas.addEventListener("dblclick", function(event) {
+    let { x, z } = getClickedPosition(event);
+    
+    // Remove cube if it exists
+    cubes = cubes.filter(c => c.x !== x || c.z !== z);
+  });
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
   //renderAllShapes();
-  g_eye = new Vector3([0, 0, 2]);
-  g_at = new Vector3([0, 0, -100]);
-  g_up = new Vector3([0, 1, 0]);
+  g_eye = new Vector3([0, 0, 0]);
+  g_at = new Vector3([0, 0, 100]);
+  g_up = new Vector3([0, 20, 0]);
   //g_camera = new Camera();
   requestAnimationFrame(tick);
 }
@@ -463,25 +494,29 @@ function setupMouseControls() {
   }
 }
 
+let cubes = []; // Stores cube positions
+
+// Converts screen coordinates to world coordinates (simplified for grid snapping)
+function getClickedPosition(event) {
+    let rect = canvas.getBoundingClientRect();
+    let x = ((event.clientX - rect.left) / canvas.width) * 2 - 1;
+    let y = 1 - ((event.clientY - rect.top) / canvas.height) * 2;
+    
+    // Simple conversion assuming a flat grid
+    let worldX = Math.round(x * 8);
+    let worldZ = Math.round(y * 8);
+    console.log("Clicked Position", worldX, worldZ);
+    return { x: worldX, z: worldZ };
+}
+
 
 var g_startTime = performance.now()/1000.0;
 var g_seconds = performance.now()/1000.0 - g_startTime;
 
 function tick(){
   g_seconds = performance.now()/1000.0 - g_startTime;
-  updateAnimationAngles();
   renderAllShapes();
   requestAnimationFrame(tick);
-}
-
-
-function updateAnimationAngles(){
-  if (g_yellowAnimation){
-    g_yellowAngle = (45*Math.sin(g_seconds));
-  }
-  if (g_magentaAnimation){
-    g_magentaAngle = (45*Math.sin(3*g_seconds));
-  }
 }
 
 function keydown(ev){
@@ -501,77 +536,114 @@ function keydown(ev){
   renderAllShapes();
 } // add w, a, etc
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 var g_map = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  [1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
-
-let cube_map = Array(32).fill().map(() => Array(32).fill(0));
-
-function renderCubesFromMap() {
-  for (let x = 0; x < 32; x++) {
-      for (let y = 0; y < 32; y++) {
-          if (cube_map[x][y] === 1) {
-              // Create and render cube at position (x, y)
-              let body = new Cube();
-              body.color = [0, 1, 1, 1];  // White color for the cubes
-              body.matrix.scale(1, 1, 1);  // Adjust scale as needed
-              body.matrix.translate(x - 18, -0.5, y - 18);  // Adjust translation based on your setup
-              body.render();
-          }
-      }
+function renderCubes() {
+  for (let cube of cubes) {
+      let newCube = new Cube();
+      newCube.color = [1, 1, 1, 1]; // White color
+      //newCube.matrix.transl
+      newCube.matrix.translate(cube.x * 0.5, -0.75, cube.z * 0.5);
+      newCube.render();
   }
 }
 
-let initialScale = 8.5;
+let initialScale = 10;
 function drawMap(){
   for (x=0;x<32;x++){
     let scale = initialScale;
-    let step = 10;
+    let step = 11;
     let depth = 0;
     for (y=0;y<32;y++){
       scale = buildBrokenWall1(x,y,scale);
       buildColumn1(x,y);
       scale = buildBrokenWall2(x,y,scale);
-      water(x,y);
+      //water(x,y);
       brokenColumn1(x,y);
+      brokenColumn2(x,y);
       buildColumn2(x,y);
       roof(x,y);
       let staircase = stairs(x,y,step,depth);
       step = staircase.step;
       depth = staircase.depth;
     }
+  }
+}
+
+function brokenColumn2(x,y){
+  if((y==9) && (x==16) && g_map[x][y]== 1){
+    var body = new Cube();
+    body.color =[0.5,1,1,1];
+    body.textureNum = 2;
+    body.matrix.rotate(5,0,0,1);
+    body.matrix.scale(.6,6,.6);
+    body.matrix.translate(x-16, -0.4, y-16);
+    body.render();
+  }
+  if((y==12) && (x==20) && g_map[x][y]== 1){
+    var body = new Cube();
+    body.color =[0.5,1,1,1];
+    body.textureNum = 2;
+    body.matrix.rotate(-5,0,0,1);
+    body.matrix.scale(.6,9,.6);
+    body.matrix.translate(x-16, -0.4, y-16);
+    body.render();
+  }
+  if((y==16) && (x==3) && g_map[x][y]== 1){
+    var body = new Cube();
+    body.color =[0.5,1,1,1];
+    body.textureNum = 2;
+    body.matrix.rotate(-5,0,0,1);
+    body.matrix.translate(1, 0, 0);
+    body.matrix.scale(.6,2,.6);
+    body.matrix.translate(x-16, -0.6, y-16);
+    body.render();
   }
 }
 
@@ -583,9 +655,10 @@ function buildBrokenWall1(x,y,scale){
     var body = new Cube();
     body.color =[1,1,1,1];
     body.textureNum = -2;
-    body.matrix.scale(.4,scale,.4);
+    //body.matrix.translate(1,0,1);
+    body.matrix.scale(.5,scale,.5);
     let adjustedY = ((scale - initialScale) * 0.4 *0.4)-0.1;
-    body.matrix.translate(x-18, adjustedY, y-18);
+    body.matrix.translate(x-16, adjustedY, y-16);
     if ((y % 11 == 0 ||y % 10 == 0) && y !== 0){
       scale = scale + 0.5;
     }else{
@@ -606,9 +679,9 @@ function buildBrokenWall2(x,y,scale){
     var body = new Cube();
     body.color =[1,1,1,1];
     body.textureNum = -2;
-    body.matrix.scale(.4,scale,.4);
+    body.matrix.scale(.5,scale,.5);
     let adjustedY = ((scale - initialScale) * 0.4 *0.4)-0.1;
-    body.matrix.translate(x-15, adjustedY, y-18);
+    body.matrix.translate(x-16, adjustedY, y-16);
     if ((y == 5 ||y == 4)){
       scale = scale + 0.1;
     }else{
@@ -669,28 +742,38 @@ function roof(x,y){
 }
 
 function buildColumn1(x,y){
-  if((x!=0 && x!=31) && (y==9) && g_map[x][y]== 1){
+  if((x!=0 && x!=31) && (y==1) && g_map[x][y]== 1){
     var body = new Cube();
     body.color =[0.5,1,1,1];
     body.textureNum = 2;
-    body.matrix.scale(.9,9,.9);
-    body.matrix.translate(x-15.5, -0.1, y-16.5);
+    if (x==1){
+      body.matrix.translate(6,0,6);
+    }
+    else {
+      body.matrix.translate(-6,0,6);
+    }
+    body.matrix.scale(.9,10,.9);
+    body.matrix.translate(x-16, -0.1, y-16);
     body.render();
   }
 }
 
 function buildColumn2(x,y){
-  if((x!=0 && x!=31) && (y==23) && g_map[x][y]== 1){
-    var degree = -15;
-    if (x > 20){
-      degree = 5;
-    }
+  if((x!=0 && x!=31) && (y==30) && g_map[x][y]== 1){
+    var angle = 10;
     var body = new Cube();
     body.color =[0.5,1,1,1];
     body.textureNum = 2;
-    body.matrix.rotate(degree,0,0,1);
-    body.matrix.scale(.9,9,.9);
-    body.matrix.translate(x-15, -0.3, y-16.5);
+    body.matrix.rotate(angle,0,0,1);
+    if (x==1){
+      body.matrix.translate(6,0,-6);
+    }
+    else {
+      body.matrix.translate(-6,0,-6);
+    }
+
+    body.matrix.scale(.9,10,.9);
+    body.matrix.translate(x-16, -0.2, y-16);
     body.render();
   }
 }
@@ -702,118 +785,71 @@ function brokenColumn1(x,y){
     body.textureNum = 2;
     body.matrix.rotate(25,0,0,1);
     body.matrix.scale(.6,2,.6);
-    body.matrix.translate(x-15, -0.4, y-16.5);
+    body.matrix.translate(x-16, -0.4, y-16);
     body.render();
   }
 }
 
-function water(x,y){
-  if ((y==31) && g_map[x][y]== 1){
-    var body = new Cube();
-    body.color =[1,1,1,1];
-    body.textureNum = -1;
-    body.matrix.scale(4.5,.8, 1);
-    body.matrix.translate(x-16.4, -1, y-25);
-    body.render();
-  }
-  if ((y==30) && g_map[x][y]== 1){
-    var body = new Cube();
-    body.color =[1,1,1,1];
-    body.textureNum = -1;
-    body.matrix.scale(4.5,.5, 1);
-    body.matrix.translate(x-16.2, -1.4, y-25);
-    body.render();
-  }
-  if ((y==29) && g_map[x][y]== 1){
-    var body = new Cube();
-    body.color =[1,1,1,1];
-    body.textureNum = -1;
-    body.matrix.scale(4.5,.3, 1);
-    body.matrix.translate(x-16.2, -2.3, y-25);
-    body.render();
-  }
-  if ((y==28) && g_map[x][y]== 1){
-    var body = new Cube();
-    body.color =[1,1,1,1];
-    body.textureNum = -1;
-    body.matrix.scale(5,.1, 1);
-    body.matrix.translate(x-16.2, -7, y-25);
-    body.render();
-  }
-}
 
 function stairs(x,y,step,depth){
-  if ((x==11) && g_map[x][y]== 1){
-    if (y > 10 && y < 17){
-      var body = new Cube();
-      body.color =[1,1,1,1];
-      body.textureNum = -2;
+  if ((x==10) && g_map[x][y]== 1){
+    var body = new Cube();
+    body.color =[.7,0.7,0.7,1];
+    body.textureNum = -2;
+
+    var rail = new Cube();
+    rail.color = [.7,0.7,0.7,1];
+    rail.textureNum = -2;
+    if (y > 4 && y < 13){
+      body.matrix.translate(1,0,5);
       body.matrix.scale(3,.5, 1);
       body.matrix.translate(x-12, step, y-16-depth);
       body.render();
 
-      var rail = new Cube();
-      rail.color = [1, 1, 1, 1];
-      rail.textureNum = -2;
       rail.matrix.set(body.matrix);
       rail.matrix.translate(0.01, 0.9, 0.9);
       rail.matrix.scale(0.03, 3, 0.1);
       rail.render();
 
       var rail2 = new Cube();
-      rail2.color = [1, 1, 1, 1];
+      rail2.color = [.7,0.7,0.7,1];
       rail2.textureNum = -2;
       rail2.matrix.set(body.matrix);
-      rail2.matrix.translate(0.98, 0.9, 0.9);
+      rail2.matrix.translate(0.9, 0.9, 0.9);
       rail2.matrix.scale(.03, 3, .1);
       rail2.render();
 
     }
-    else if (y == 17){
-      var body = new Cube();
-      body.color =[1,1,1,1];
-      body.textureNum = -2;
+    else if (y == 13){
+      body.matrix.translate(1,0,5);
       body.matrix.scale(2,.5, 1);
       body.matrix.translate(x-12.5, step, y-16-depth);
       body.render();
 
-      var rail = new Cube();
-      rail.color = [1,1,1,1];
-      rail.textureNum = -2;
       rail.matrix.set(body.matrix);
-      rail.matrix.translate(0.01, 0.9, 0.9);
+      rail.matrix.translate(0.9, 0.9, 0.9);
       rail.matrix.scale(0.05, 3, 0.08);
       rail.render();
     }
-    else if (y == 18){
-      var body = new Cube();
-      body.color =[1,1,1,1];
-      body.textureNum = -2;
+    else if (y == 14){
+      body.matrix.translate(1,0,5);
       body.matrix.scale(1.5,.5, 1);
       body.matrix.translate(x-13, step, y-16-depth);
       body.render();
 
-      var rail = new Cube();
-      rail.color = [1,1,1,1];
-      rail.textureNum = -2;
       rail.matrix.set(body.matrix);
-      rail.matrix.translate(0.01, 0.9, 0.9);
+      rail.matrix.translate(0.9, 0.9, 0.9);
       rail.matrix.scale(0.05, 3, 0.08);
       rail.render();
     }
     else {
-      var body = new Cube();
-      body.color =[1,1,1,1];
-      body.textureNum = -2;
+      body.matrix.translate(1,0,5);
       body.matrix.scale(1,.5, 1);
       body.matrix.translate(x-14, step, y-16-depth);
       body.render();
 
-      var rail = new Cube();
-      rail.color = [1,1,1,1];
-      rail.textureNum = -2;
       rail.matrix.set(body.matrix);
-      rail.matrix.translate(0.01, 0.9, 0.9);
+      rail.matrix.translate(0.9, 0.9, 0.9);
       rail.matrix.scale(0.1, 3, 0.08);
       rail.render();
     }
@@ -824,17 +860,20 @@ function stairs(x,y,step,depth){
   return {step,depth};
 }
 
+
 function canMoveTo(newX, newZ) {
-  let gridX = Math.floor(newX + 16);  // Convert world position to grid index
-  let gridZ = Math.floor(newZ + 16);
-  console.log(gridX, gridZ);  
+  let gridX = Math.floor((newX + 8) * 2);  // Scale down world position
+  let gridZ = Math.floor((newZ + 8) * 2);
+  console.log("Actual Position: ", gridX, gridZ); 
+  
+  let size = 32;
 
   // Prevent out-of-bounds access
-  if (gridX < 0 || gridX >= g_map.length || gridZ < 0 || gridZ >= g_map[0].length) {
+  if (gridX < 0 || gridX >= size || gridZ < 0 || gridZ >= size) {
       return false;  // Out of bounds
   }
 
-  return g_map[gridX][gridZ] === 0 || g_map[gridX][gridZ] === 1;
+  return g_map[gridX][gridZ] === 0 //|| g_map[gridX][gridZ] === 1;
   // Only allow movement if it's an empty space
 }
 
@@ -950,56 +989,219 @@ function renderAllShapes(){
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.clear(gl.COLOR_BUFFER_BIT);
 
-  renderCubesFromMap();
+  //renderCubesFromMap();
   drawMap();
+  renderCubes();
 
   var floor = new Cube();
   floor.color = [0.0,0.0,0.5,1.0];
   floor.textureNum = 3;
   floor.matrix.translate(0,-.75,0.0);
-  floor.matrix.scale(15,0,15);
+  floor.matrix.scale(16,0,16);
   floor.matrix.translate(-.5,0,-0.5);
   floor.render();
 
   var backWall = new Cube();
   backWall.color = [1,1,1,1.0];
   backWall.textureNum = 1;
-  backWall.matrix.translate(0,-.75,0.0);
+  backWall.matrix.translate(0,-.75,-1);
   backWall.matrix.rotate(90,1,0,0);
   backWall.matrix.rotate(180,1,0,0);
   backWall.matrix.rotate(180,0,1,0);
-  backWall.matrix.scale(12.5,0.5,9);
+  backWall.matrix.scale(14,0.5,9);
   backWall.matrix.translate(-0.51, 14,-1);
   backWall.render();
 
   var frontWall = new Cube();
   frontWall.color = [1,1,1,1.0];
   frontWall.textureNum = 4;
-  frontWall.matrix.translate(0,-.75,0.0);
+  frontWall.matrix.translate(0,-.75,1);
   frontWall.matrix.rotate(90,1,0,0);
   frontWall.matrix.rotate(180,1,0,0);
   //frontWall.matrix.rotate(180,0,1,0);
-  frontWall.matrix.scale(13,0.5,9);
+  frontWall.matrix.scale(16,0.5,11);
   frontWall.matrix.translate(-0.51, -14, 0);
   frontWall.render();
 
   var railing = new Cube();
-  railing.color = [1,1,1,1.0];
+  railing.color = [.7,.7,.7,1.0];
   railing.textureNum = -2;
-  railing.matrix.translate(0,2,-.1);
+  railing.matrix.translate(0,1.45,-.1);
   railing.matrix.rotate(-45,1,0,0);
   railing.matrix.scale(0.1,7.6,0.1);
-  railing.matrix.translate(-30,-0.15,0);
+  railing.matrix.translate(-21.5,0,0);
   railing.render();
 
   var railing2 = new Cube();
-  railing2.color = [1,1,1,1.0];
+  railing2.color = [.7,.7,.7,1.0];
   railing2.textureNum = -2;
-  railing2.matrix.translate(0,2,-.1);
+  railing2.matrix.translate(0,1.45,-.1);
   railing2.matrix.rotate(-45,1,0,0);
-  railing2.matrix.scale(0.1,4,0.1);
-  railing2.matrix.translate(-1,0.65,0);
+  railing2.matrix.scale(0.1,5.5,0.1);
+  railing2.matrix.translate(-50,0.45,0);
   railing2.render();
+
+  var water = new Cube();
+  water.color =[1,1,1,1];
+  water.textureNum = -1;
+  water.matrix.scale(14,.8,1);
+  water.matrix.translate(-.5, -1, 6);
+  water.render();
+
+  var water = new Cube();
+  water.color =[1,1,1,1];
+  water.textureNum = -1;
+  water.matrix.scale(14,.5,1);
+  water.matrix.translate(-.5, -1.5, 5);
+  water.render();
+
+  var water = new Cube();
+  water.color =[1,1,1,1];
+  water.textureNum = -1;
+  water.matrix.scale(14,.2,1);
+  water.matrix.translate(-.5, -3.5, 4);
+  water.render();
+
+  var water = new Cube();
+  water.color =[1,1,1,1];
+  water.textureNum = -1;
+  water.matrix.scale(14,.1,1);
+  water.matrix.translate(-.5, -7, 3);
+  water.render();
+
+  var water = new Cube();
+  water.color =[1,1,1,1];
+  water.textureNum = -1;
+  water.matrix.scale(14,.05,1);
+  water.matrix.translate(-.5, -14, 2);
+  water.render();
+
+  var statue = new Cube();
+  statue.color = [1,1,1,1];
+  statue.textureNum = -2;
+  
+  statue.matrix.scale(1.5,.5,1.5);
+  statue.matrix.translate(2,-1.5,-0.6);
+  statue.matrix.rotate(45,0,1,0);
+  statue.render();
+
+  var leg1 = new Cube();
+  leg1.color = [1, 1, 1, 1];
+  leg1.textureNum = -2;
+  leg1.matrix.translate(2.75,0,-0.75);
+  leg1.matrix.scale(0.25, 1.5, 0.25);  // Smaller scale
+  leg1.matrix.translate(4, -0.25, -1);  // Adjust Y position to stack on top
+  leg1.render();
+
+  var leg2 = new Cube();
+  leg2.color = [1, 1, 1, 1];
+  leg2.textureNum = -2;
+  leg2.matrix.translate(3.15,0,-0.75);
+  leg2.matrix.scale(0.25, 1.5, 0.25);  // Smaller scale
+  leg2.matrix.translate(4, -0.25, -1);  // Adjust Y position to stack on top
+  leg2.render();
+
+  var body = new Cube();
+  body.color = [1,1,1,1];
+  body.textureNum = -2;
+  body.textureNum = -2;
+  body.matrix.translate(1,0.25,-0.75);
+  body.matrix.scale(0.75, 0.85, 0.5);  // Smaller scale
+  body.matrix.translate(3.6, 0.5, -0.75);  // Adjust Y position to stack on top
+  body.render();
+
+  var neck = new Cube();
+  neck.color = [1,1,1,1];
+  neck.textureNum = -2;
+  neck.textureNum = -2;
+  neck.matrix.translate(3,1.35,-0.75);
+  neck.matrix.scale(0.25, 0.25, 0.25);  // Smaller scale
+  neck.matrix.translate(3.75, 0.5, -0.75);  // Adjust Y position to stack on top
+  neck.render();
+
+  var head = new Cube();
+  head.color = [1,1,1,1];
+  head.textureNum = -2;
+  head.textureNum = -2;
+  head.matrix.translate(2.85,1.65,-0.75);
+  head.matrix.scale(0.35, 0.5, 0.35);  // Smaller scale
+  head.matrix.translate(3, 0, -0.75);  // Adjust Y position to stack on top
+  head.render();
+
+  var shoulder1 = new Cube();
+  shoulder1.color = [1,1,1,1];
+  shoulder1.textureNum = -2;
+  shoulder1.textureNum = -2;
+  shoulder1.matrix.translate(2.95,1.25,-.85);
+  shoulder1.matrix.scale(0.2, 0.15, 0.15);  // Smaller scale
+  shoulder1.matrix.translate(3, 0, -0.75);  // Adjust Y position to stack on top
+  shoulder1.render();
+
+  var shoulder2 = new Cube();
+  shoulder2.color = [1,1,1,1];
+  shoulder2.textureNum = -2;
+  shoulder2.textureNum = -2;
+  shoulder2.matrix.translate(3.8,1.25,-.85);
+  shoulder2.matrix.scale(0.2, 0.15, 0.15);  // Smaller scale
+  shoulder2.matrix.translate(3, 0, -0.75);  // Adjust Y position to stack on top
+  shoulder2.render();
+
+
+  var arm1 = new Cube();
+  arm1.color = [1,1,1,1];
+  arm1.textureNum = -2;
+  arm1.matrix.translate(2.95,1.25,-.85);
+  arm1.matrix.scale(0.15, 0.5, 0.15);  // Smaller scale
+  arm1.matrix.translate(3, 0, -0.75);  // Adjust Y position to stack on top
+  arm1.render();
+
+  var arm2 = new Cube();
+  arm2.color = [1,1,1,1];
+  arm2.textureNum = -2;
+  arm2.matrix.translate(4.15,0.9,-.85);
+  arm2.matrix.scale(0.15, 0.5, 0.15);  // Smaller scale
+  arm2.matrix.translate(3, 0, -0.75);  // Adjust Y position to stack on top
+  arm2.render();
+
+  var nose = new Cube();
+  nose.color = [0.8,.8,.8,1];
+  nose.textureNum = -2;
+  nose.matrix.translate(3.72,1.75,-.6);
+  nose.matrix.scale(0.1, 0.15, 0.1);  // Smaller scale
+  nose.matrix.translate(3, 0, -0.75);  // Adjust Y position to stack on top
+  nose.render();
+
+  var horn1 = new Cube();
+  horn1.color = [0.8,.8,.8,1];
+  horn1.textureNum = -2;
+  horn1.matrix.translate(3.3,2,-.75);
+  horn1.matrix.scale(0.15, 0.1, 0.1);  // Smaller scale
+  horn1.matrix.translate(3, 0, -0.75);  // Adjust Y position to stack on top
+  horn1.render();
+
+  var horn2 = new Cube();
+  horn2.color = [0.8,.8,.8,1];
+  horn2.textureNum = -2;
+  horn2.matrix.translate(3.8,2,-.75);
+  horn2.matrix.scale(0.15, 0.1, 0.1);  // Smaller scale
+  horn2.matrix.translate(3, 0, -0.75);  // Adjust Y position to stack on top
+  horn2.render();
+
+  var horn1 = new Cube();
+  horn1.color = [0.8,.8,.8,1];
+  horn1.textureNum = -2;
+  horn1.matrix.translate(3.6,2,-.75);
+  horn1.matrix.scale(0.05, 0.2, 0.1);  // Smaller scale
+  horn1.matrix.translate(3, 0, -0.75);  // Adjust Y position to stack on top
+  horn1.render();
+
+  var horn2 = new Cube();
+  horn2.color = [0.8,.8,.8,1];
+  horn2.textureNum = -2;
+  horn2.matrix.translate(4.2,2,-.75);
+  horn2.matrix.scale(0.05, 0.2, 0.1);  // Smaller scale
+  horn2.matrix.translate(3, 0, -0.75);  // Adjust Y position to stack on top
+  horn2.render();
 
 
   var sky = new Cube();
