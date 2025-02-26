@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Change a point color</title>
+  </head>
+
+  <body onload="main()">
+    <canvas id="webgl" width="400" height="400">
+    Please use a browser that supports "canvas"
+    </canvas>
+
+    <p>
+    <p id="numdot">XXX</p>
+
+    <button type="button" id="normalOn">Normal On</button>
+    <button type="button" id="normalOff">Normal Off</button>
+    <p>
+    Light 
+    <button type="button" id="lightOn">ON</button>
+    <button type="button" id="lightOff">OFF</button>
+    Animation
+    <button type="button" id="animationOn">ON</button>
+    <button type="button" id="animationOff">OFF</button>
+    <p>
+    Pleae turn off the animation before using the sliders!
+    <p>
+    Light X <input type="range" min="-250" max="250" value="0" class="slider" id="lightSlideX">
+    Light Y <input type="range" min="-250" max="250" value="100" class="slider" id="lightSlideY">
+    Light Z <input type="range" min="-250" max="250" value="-200" class="slider" id="lightSlideZ">
+    <p>
+    Camera Angle <input type="range" min="-180" max="180" value="5" class="slider" id="angleSlide">
+    <p>
+    This world is set in a battered, abandoned mansion, destroyed from the seas storms.
+  
+
+    <script src="../lib/webgl-utils.js"></script>
+    <script src="../lib/webgl-debug.js"></script>
+    <script src="../lib/cuon-utils.js"></script>
+    <script src="../lib/cuon-matrix.js"></script>
+    <script src="Triangle.js"></script>
+    <script src="Point.js"></script>
+    <script src="Circle.js"></script>
+    <script src="Cube.js"></script>
+    <script src="Sphere.js"></script>
+    <script src="World.js"></script>
+  </body>
+</html>
