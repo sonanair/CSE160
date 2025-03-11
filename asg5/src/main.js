@@ -26,7 +26,7 @@ function main() {
     const planeSize = 40;
  
     const loader = new THREE.TextureLoader();
-    const texture = loader.load('../lib/textures/checker.png');
+    const texture = loader.load('/lib/textures/checker.png');
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.magFilter = THREE.NearestFilter;
@@ -47,22 +47,22 @@ function main() {
 
     const textureLoader = new THREE.TextureLoader();
     
-    const snowColor = textureLoader.load('../lib/textures/snow_02_diff_4k.jpg');
-    const normalMap = textureLoader.load('../lib/textures/snow_02_nor_gl_4k.exr');  // Might need EXRLoader for this
-    const displacementMap = textureLoader.load('../lib/textures/snow_02_disp_4k.png');
-    const roughnessMap = textureLoader.load('../lib/textures/snow_02_rough_4k.jpg');
+    const snowColor = textureLoader.load('/lib/textures/snow_02_diff_4k.jpg');
+    const normalMap = textureLoader.load('/lib/textures/snow_02_nor_gl_4k.exr');  // Might need EXRLoader for this
+    const displacementMap = textureLoader.load('/lib/textures/snow_02_disp_4k.png');
+    const roughnessMap = textureLoader.load('/lib/textures/snow_02_rough_4k.jpg');
 
     const rockLoader = new THREE.TextureLoader();
-    const rockColor = rockLoader.load('../lib/textures/mossy_rock_diff_4k.jpg');
-    const rockDisplacement = rockLoader.load('../lib/textures/mossy_rock_disp_4k.png');
-    const rockNormal = rockLoader.load('../lib/textures/mossy_rock_nor_gl_4k.exr');
-    const rockRoughness = rockLoader.load('../lib/textures/mossy_rock_rough_4k.exr');
+    const rockColor = rockLoader.load('/lib/textures/mossy_rock_diff_4k.jpg');
+    const rockDisplacement = rockLoader.load('/lib/textures/mossy_rock_disp_4k.png');
+    const rockNormal = rockLoader.load('/lib/textures/mossy_rock_nor_gl_4k.exr');
+    const rockRoughness = rockLoader.load('/lib/textures/mossy_rock_rough_4k.exr');
 
     const barkLoader = new THREE.TextureLoader();
-    const barkColor = barkLoader.load('../lib/textures/pine_bark_diff_4k.jpg');
-    const barkDisplacement = barkLoader.load('../lib/textures/pine_bark_disp_4k.png');
-    const barkNormal = barkLoader.load('../lib/textures/pine_bark_nor_gl_4k.exr');
-    const barkRoughness = barkLoader.load('../lib/textures/pine_bark_rough_4k.exr');
+    const barkColor = barkLoader.load('/lib/textures/pine_bark_diff_4k.jpg');
+    const barkDisplacement = barkLoader.load('/lib/textures/pine_bark_disp_4k.png');
+    const barkNormal = barkLoader.load('/lib/textures/pine_bark_nor_gl_4k.exr');
+    const barkRoughness = barkLoader.load('/lib/textures/pine_bark_rough_4k.exr');
 
     // Material Set Up ----------------------------------------------------------------
     const snowMaterial = new THREE.MeshStandardMaterial({
