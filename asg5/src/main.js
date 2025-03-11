@@ -174,10 +174,10 @@ function main() {
     const mtlLoader = new MTLLoader();
 
     function create3DModel(x, y, z, scale){
-        mtlLoader.load('../lib/3dModel/Tree2.mtl', (mtl) => {
+        mtlLoader.load('/lib/3dModel/Tree2.mtl', (mtl) => {
             mtl.preload();
             objLoader.setMaterials(mtl);
-            objLoader.load('../lib/3dModel/Tree2.obj', (root) => {
+            objLoader.load('/lib/3dModel/Tree2.obj', (root) => {
                 root.scale.set(scale, scale, scale); // Adjust scale if needed
                 root.position.set(x, y, z); // Move it into view
                 root.traverse((child) => {
